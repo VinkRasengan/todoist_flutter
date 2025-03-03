@@ -1,0 +1,13 @@
+// Add these commands to clean the project and update dependencies
+clean {
+    delete rootProject.buildDir
+}
+
+task cleanCache(type: Delete) {
+    delete fileTree(dir: "${System.properties['user.home']}/.gradle/caches/")
+}
+
+task cleanAll(type: Delete) {
+    delete rootProject.buildDir
+    delete fileTree(dir: "${System.properties['user.home']}/.gradle/caches/")
+}

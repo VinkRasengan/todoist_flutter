@@ -48,6 +48,68 @@ class TodoScreenState extends State<TodoScreen> {
                     firstDate: DateTime.now(),
                     lastDate: DateTime(2100),
                   );
+                  if (selectedTime != null) {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.now(),
+                    );
+                    if (time != null) {
+                      selectedTime = DateTime(
+                        selectedTime!.year,
+                        selectedTime!.month,
+                        selectedTime!.day,
+                        time.hour,
+                        time.minute,
+                      );
+                    }
+                  }
+                  if (!mounted) return; // Check if the widget is still mounted
+                  setState(() {}); // Thêm để cập nhật UI
+                },
+                child: const Text('Select Date & Time'),
+              )
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                if (!mounted) return; // Check if the widget is still mounted
+                Provider.of<TodoProvider>(context, listen: false)
+                    .addTodo(controller.text, time: selectedTime);
+                Navigator.pop(context);
+              },
+              child: const Text('Add'),
+            )
+          ],
+        );
+      },
+    );
+  }
+
+  void _showEditTodoDialog(BuildContext context, Todo todo, int index) {
+    TextEditingController controller = TextEditingController(text: todo.title);
+    DateTime? selectedTime = todo.time;
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit TODO'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(hintText: 'Enter TODO title'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  selectedTime = await showDatePicker(
+                    context: context,
+                    initialDate: todo.time ?? DateTime.now(),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime(2100),
+                  );
                 },
                 child: const Text('Select Date'),
               )
@@ -56,11 +118,12 @@ class TodoScreenState extends State<TodoScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Provider.of<TodoProvider>(context, listen: false)
-                    .addTodo(controller.text, time: selectedTime);
+                if (!mounted) return; // Check if the widget is still mounted
+                final provider = Provider.of<TodoProvider>(context, listen: false);
+                provider.updateTodo(index, controller.text, selectedTime, todo.isCompleted);
                 Navigator.pop(context);
               },
-              child: const Text('Add'),
+              child: const Text('Save'),
             )
           ],
         );
@@ -136,8 +199,13 @@ class TodoScreenState extends State<TodoScreen> {
                       child: Card(
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 4,
+                        color: todo.isCompleted ? Colors.grey[300] : Colors.white,
                         child: ListTile(
+                          onTap: () => _showEditTodoDialog(context, todo, index),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          tileColor: todo.time?.isBefore(DateTime.now()) == true && !todo.isCompleted 
+                              ? Colors.red[50] 
+                              : null,
                           title: Text(
                             todo.title,
                             style: TextStyle(
@@ -155,7 +223,28 @@ class TodoScreenState extends State<TodoScreen> {
                           ),
                           trailing: IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => todoProvider.removeTodo(index),
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Confirm Delete'),
+                                  content: const Text('Are you sure you want to delete this task?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        todoProvider.removeTodo(index);
+                                        Navigator.pop(context);
+                                      },
+                                      child: const Text('Delete'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ),
